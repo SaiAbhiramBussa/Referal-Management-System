@@ -1,0 +1,146 @@
+// Prisma Schema for Referral Reward Ledger
+// Implements immutable, audit-friendly financial ledger
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MODEL
+// ============================================
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  referralsMade    Reward[]      @relation("Referrer")
+  referralsReceived Reward[]     @relation("Referred")
+  ledgerEntries    LedgerEntry[]
+
+  @@map("users")
+}
+
+// ============================================
+// REWARD MODEL
+// Tracks referral rewards with lifecycle: PENDING → CONFIRMED → PAID / REVERSED
+// ============================================
+model Reward {
+  id             String       @id @default(uuid())
+  referrerId     String
+  referredId     String
+  amount         Decimal      @db.Decimal(19, 4)
+  currency       String       @default("INR")
+  status         RewardStatus @default(PENDING)
+  idempotencyKey String       @unique
+  metadata       Json?        @db.JsonB
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relations
+  referrer      User          @relation("Referrer", fields: [referrerId], references: [id])
+  referred      User          @relation("Referred", fields: [referredId], references: [id])
+  ledgerEntries LedgerEntry[]
+
+  @@index([referrerId])
+  @@index([referredId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("rewards")
+}
+
+enum RewardStatus {
+  PENDING
+  CONFIRMED
+  PAID
+  REVERSED
+}
+
+// ============================================
+// LEDGER ENTRY MODEL
+// Immutable, append-only ledger for audit trail
+// No updates or deletes allowed (enforced at application level)
+// ============================================
+model LedgerEntry {
+  id                String           @id @default(uuid())
+  userId            String
+  rewardId          String?
+  type              LedgerEntryType
+  amount            Decimal          @db.Decimal(19, 4)
+  currency          String           @default("INR")
+  status            LedgerStatus     @default(POSTED)
+  reversalOfEntryId String?          @unique // Unique constraint prevents double reversal
+  metadata          Json?            @db.JsonB
+  createdAt         DateTime         @default(now())
+
+  // NO updatedAt - entries are immutable
+
+  // Relations
+  user            User         @relation(fields: [userId], references: [id])
+  reward          Reward?      @relation(fields: [rewardId], references: [id])
+  reversalOf      LedgerEntry? @relation("ReversalChain", fields: [reversalOfEntryId], references: [id])
+  reversedBy      LedgerEntry? @relation("ReversalChain")
+
+  @@index([userId])
+  @@index([rewardId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("ledger_entries")
+}
+
+enum LedgerEntryType {
+  CREDIT
+  DEBIT
+  REVERSAL
+}
+
+enum LedgerStatus {
+  POSTED
+  VOID
+}
+
+// ============================================
+// IDEMPOTENCY KEY MODEL
+// Ensures idempotent request handling
+// ============================================
+model IdempotencyKey {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  requestHash String
+  response    Json?    @db.JsonB
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
+// ============================================
+// RULE MODEL
+// Versioned rules for the flow builder
+// ============================================
+model Rule {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  version     Int      @default(1)
+  isActive    Boolean  @default(true)
+  conditions  Json     @db.JsonB
+  actions     Json     @db.JsonB
+  metadata    Json?    @db.JsonB
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([name, version])
+  @@index([isActive])
+  @@index([createdAt])
+  @@map("rules")
+}
