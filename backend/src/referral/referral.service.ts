@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { LedgerService } from '../ledger/ledger.service';
 import { z } from 'zod';
 import { randomBytes } from 'crypto';
+import * as bcrypt from 'bcrypt';
 
 export const CreateReferralSchema = z.object({
   referredEmail: z.string().email(),
@@ -32,15 +33,17 @@ export class ReferralService {
       where: { email: validated.referredEmail },
     });
 
-    // If user doesn't exist, create a placeholder
+    // If user doesn't exist, create a placeholder with hashed password
     if (!referredUser) {
-      const tempPassword = randomBytes(16).toString('hex');
+      // Generate a secure random password and hash it
+      const tempPassword = randomBytes(32).toString('hex');
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
       
       referredUser = await this.prisma.user.create({
         data: {
           email: validated.referredEmail,
           name: validated.referredName,
-          password: tempPassword, // In real system, send invitation email
+          password: hashedPassword, // Properly hashed password
         },
       });
 
