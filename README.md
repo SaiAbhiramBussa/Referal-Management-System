@@ -45,24 +45,10 @@ A production-grade take-home project implementing a money-safe reward ledger and
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Docker & Docker Compose
+
 - Node.js 20+ (for local development)
 
-### Using Docker (Recommended)
 
-```bash
-# Clone the repository
-cd Referal-Management-System
-
-# Start all services
-docker-compose up -d
-
-# Run database migrations
-docker exec referral-backend npx prisma migrate deploy
-
-# Seed sample data
-docker exec referral-backend npm run prisma:seed
-```
 
 **Services:**
 - Frontend: http://localhost:3000
@@ -313,7 +299,7 @@ Features:
 │       │   └── flow-builder/  # React Flow components
 │       ├── store/             # Zustand state
 │       └── pages/             # Next.js pages
-├── docker-compose.yml         # Container orchestration
+
 └── README.md
 ```
 
