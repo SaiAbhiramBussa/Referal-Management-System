@@ -31,12 +31,23 @@ export default function JsonPreview() {
     reader.onload = (e) => {
       try {
         const json = JSON.parse(e.target?.result as string);
-        if (json.conditions && json.actions) {
-          importRule(json);
-          setShowImport(false);
-        } else {
-          alert('Invalid rule format');
+        
+        // Validate rule structure
+        if (!json.conditions || typeof json.conditions !== 'object') {
+          alert('Invalid rule format: missing or invalid conditions');
+          return;
         }
+        if (!json.actions || !Array.isArray(json.actions)) {
+          alert('Invalid rule format: missing or invalid actions array');
+          return;
+        }
+        if (!json.conditions.type || !['AND', 'OR', 'CONDITION'].includes(json.conditions.type)) {
+          alert('Invalid rule format: conditions must have a valid type (AND, OR, or CONDITION)');
+          return;
+        }
+        
+        importRule(json);
+        setShowImport(false);
       } catch (err) {
         alert('Failed to parse JSON file');
       }

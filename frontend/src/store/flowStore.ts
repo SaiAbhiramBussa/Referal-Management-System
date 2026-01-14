@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Node, Edge, addEdge, Connection } from 'reactflow';
+import { Node, Edge, addEdge, Connection, applyNodeChanges, applyEdgeChanges, NodeChange, EdgeChange } from 'reactflow';
 import { FlowNodeData, ConditionNode, ActionDefinition, ActionType, ConditionOperator } from '@/types/rule';
 
 interface FlowStore {
@@ -9,8 +9,8 @@ interface FlowStore {
   ruleName: string;
   setNodes: (nodes: Node<FlowNodeData>[]) => void;
   setEdges: (edges: Edge[]) => void;
-  onNodesChange: (changes: any) => void;
-  onEdgesChange: (changes: any) => void;
+  onNodesChange: (changes: NodeChange[]) => void;
+  onEdgesChange: (changes: EdgeChange[]) => void;
   onConnect: (connection: Connection) => void;
   setSelectedNode: (node: Node<FlowNodeData> | null) => void;
   setRuleName: (name: string) => void;
@@ -44,15 +44,14 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
 
-  onNodesChange: (changes) => {
+  onNodesChange: (changes: NodeChange[]) => {
     const { nodes } = get();
-    // Apply changes manually for simplicity
-    set({ nodes: [...nodes] });
+    set({ nodes: applyNodeChanges(changes, nodes) as Node<FlowNodeData>[] });
   },
 
-  onEdgesChange: (changes) => {
+  onEdgesChange: (changes: EdgeChange[]) => {
     const { edges } = get();
-    set({ edges: [...edges] });
+    set({ edges: applyEdgeChanges(changes, edges) });
   },
 
   onConnect: (connection) => {

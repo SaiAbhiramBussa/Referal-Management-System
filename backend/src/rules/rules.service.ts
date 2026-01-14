@@ -143,50 +143,43 @@ export class RulesService {
     // Get the value from the event using dot notation (e.g., "referrer.status")
     const fieldValue = this.getNestedValue(event, node.field);
     const conditionValue = node.value;
+    
+    // Normalize operator to string for comparison (handles both enum values and string literals)
+    const operator = String(node.operator);
 
-    switch (node.operator) {
-      case ConditionOperator.EQUALS:
-      case '=' as ConditionOperator:
+    switch (operator) {
+      case '=':
         return fieldValue === conditionValue;
 
-      case ConditionOperator.NOT_EQUALS:
-      case '!=' as ConditionOperator:
+      case '!=':
         return fieldValue !== conditionValue;
 
-      case ConditionOperator.GREATER_THAN:
-      case '>' as ConditionOperator:
+      case '>':
         return typeof fieldValue === 'number' && typeof conditionValue === 'number' 
           && fieldValue > conditionValue;
 
-      case ConditionOperator.LESS_THAN:
-      case '<' as ConditionOperator:
+      case '<':
         return typeof fieldValue === 'number' && typeof conditionValue === 'number' 
           && fieldValue < conditionValue;
 
-      case ConditionOperator.GREATER_THAN_OR_EQUAL:
-      case '>=' as ConditionOperator:
+      case '>=':
         return typeof fieldValue === 'number' && typeof conditionValue === 'number' 
           && fieldValue >= conditionValue;
 
-      case ConditionOperator.LESS_THAN_OR_EQUAL:
-      case '<=' as ConditionOperator:
+      case '<=':
         return typeof fieldValue === 'number' && typeof conditionValue === 'number' 
           && fieldValue <= conditionValue;
 
-      case ConditionOperator.IN:
-      case 'in' as ConditionOperator:
+      case 'in':
         return Array.isArray(conditionValue) && conditionValue.includes(fieldValue);
 
-      case ConditionOperator.NOT_IN:
-      case 'not_in' as ConditionOperator:
+      case 'not_in':
         return Array.isArray(conditionValue) && !conditionValue.includes(fieldValue);
 
-      case ConditionOperator.EXISTS:
-      case 'exists' as ConditionOperator:
+      case 'exists':
         return conditionValue ? fieldValue !== undefined : fieldValue === undefined;
 
-      case ConditionOperator.CONTAINS:
-      case 'contains' as ConditionOperator:
+      case 'contains':
         return typeof fieldValue === 'string' && typeof conditionValue === 'string' 
           && fieldValue.includes(conditionValue);
 

@@ -4,6 +4,13 @@ This repository contains a comprehensive implementation of a Referral Management
 1. **Financial Ledger System** - An immutable, audit-friendly, user-level financial ledger for referral rewards
 2. **Rule-Based Flow Builder** - A visual rule engine for building referral reward logic
 
+## Screenshots
+
+### Flow Builder UI
+![Flow Builder with Nodes](https://github.com/user-attachments/assets/1cf27c27-17e4-4470-8e6e-27647a1df1ae)
+
+*Visual flow builder with Start, Condition, Action, and End nodes connected in a workflow*
+
 ## Table of Contents
 - [Architecture Overview](#architecture-overview)
 - [Setup Instructions](#setup-instructions)
