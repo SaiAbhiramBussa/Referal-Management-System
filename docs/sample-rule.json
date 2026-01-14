@@ -1,0 +1,30 @@
+{
+  "name": "referral_subscription_reward",
+  "conditions": {
+    "type": "AND",
+    "children": [
+      {
+        "type": "CONDITION",
+        "field": "referrer.status",
+        "operator": "=",
+        "value": "paid"
+      },
+      {
+        "type": "CONDITION",
+        "field": "referred.subscribed",
+        "operator": "=",
+        "value": true
+      }
+    ]
+  },
+  "actions": [
+    {
+      "type": "createReward",
+      "params": {
+        "amount": 500,
+        "currency": "INR",
+        "type": "voucher"
+      }
+    }
+  ]
+}

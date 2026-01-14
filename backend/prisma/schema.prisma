@@ -1,0 +1,121 @@
+// Prisma schema for Financial Ledger System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  createdAt     DateTime       @default(now())
+  
+  // Relations
+  referralsGiven   Reward[]       @relation("Referrer")
+  referralsReceived Reward[]      @relation("Referred")
+  ledgerEntries    LedgerEntry[]
+  
+  @@map("users")
+}
+
+// Reward status enum for lifecycle management
+enum RewardStatus {
+  PENDING
+  CONFIRMED
+  PAID
+  REVERSED
+}
+
+// Reward model for referral rewards
+model Reward {
+  id              String       @id @default(uuid())
+  referrerId      String
+  referredId      String
+  amount          Decimal      @db.Decimal(18, 2)
+  currency        String       @default("INR")
+  status          RewardStatus @default(PENDING)
+  idempotencyKey  String       @unique
+  metadata        Json?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  // Relations
+  referrer        User         @relation("Referrer", fields: [referrerId], references: [id])
+  referred        User         @relation("Referred", fields: [referredId], references: [id])
+  ledgerEntries   LedgerEntry[]
+  
+  @@index([referrerId])
+  @@index([referredId])
+  @@index([status])
+  @@map("rewards")
+}
+
+// Ledger entry type enum
+enum LedgerEntryType {
+  CREDIT
+  DEBIT
+  REVERSAL
+}
+
+// Ledger entry status enum
+enum LedgerEntryStatus {
+  POSTED
+  VOID
+}
+
+// Immutable ledger entry model
+model LedgerEntry {
+  id                String            @id @default(uuid())
+  userId            String
+  rewardId          String?
+  type              LedgerEntryType
+  amount            Decimal           @db.Decimal(18, 2)
+  currency          String            @default("INR")
+  status            LedgerEntryStatus @default(POSTED)
+  reversalOfEntryId String?           @unique  // Unique to prevent double reversal
+  metadata          Json?
+  createdAt         DateTime          @default(now())
+  
+  // Relations
+  user              User              @relation(fields: [userId], references: [id])
+  reward            Reward?           @relation(fields: [rewardId], references: [id])
+  originalEntry     LedgerEntry?      @relation("EntryReversal", fields: [reversalOfEntryId], references: [id])
+  reversalEntry     LedgerEntry?      @relation("EntryReversal")
+  
+  @@index([userId])
+  @@index([rewardId])
+  @@index([createdAt])
+  @@map("ledger_entries")
+}
+
+// Idempotency keys for safe request handling
+model IdempotencyKey {
+  key           String   @id @unique
+  requestHash   String
+  response      Json
+  createdAt     DateTime @default(now())
+  
+  @@map("idempotency_keys")
+}
+
+// Rule model for rule engine
+model Rule {
+  id          String   @id @default(uuid())
+  name        String
+  version     Int      @default(1)
+  conditions  Json     // AND/OR tree with operators
+  actions     Json     // Array of actions
+  isActive    Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([name, version])
+  @@index([isActive])
+  @@map("rules")
+}
