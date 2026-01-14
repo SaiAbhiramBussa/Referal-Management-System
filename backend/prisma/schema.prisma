@@ -1,0 +1,126 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  accounts          Account[]
+  referralsMade     Referral[]       @relation("Referrer")
+  referralsReceived Referral[]       @relation("Referred")
+  ledgerEntries     LedgerEntry[]
+  flowExecutions    FlowExecution[]
+
+  @@map("users")
+}
+
+// Account model for reward tracking (double-entry accounting)
+model Account {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   // 'ASSET', 'LIABILITY', 'EQUITY'
+  name      String
+  balance   Decimal  @default(0) @db.Decimal(19, 4)
+  currency  String   @default("USD")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  debitEntries  LedgerEntry[] @relation("DebitAccount")
+  creditEntries LedgerEntry[] @relation("CreditAccount")
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+// Double-entry ledger
+model LedgerEntry {
+  id              String   @id @default(uuid())
+  userId          String
+  transactionId   String
+  debitAccountId  String
+  creditAccountId String
+  amount          Decimal  @db.Decimal(19, 4)
+  description     String
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  debitAccount  Account @relation("DebitAccount", fields: [debitAccountId], references: [id])
+  creditAccount Account @relation("CreditAccount", fields: [creditAccountId], references: [id])
+
+  @@index([userId])
+  @@index([transactionId])
+  @@index([createdAt])
+  @@map("ledger_entries")
+}
+
+// Referral tracking
+model Referral {
+  id          String   @id @default(uuid())
+  referrerId  String
+  referredId  String
+  code        String   @unique
+  status      String   // 'PENDING', 'COMPLETED', 'REWARDED'
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+
+  referrer User @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred User @relation("Referred", fields: [referredId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId])
+  @@index([referredId])
+  @@index([code])
+  @@map("referrals")
+}
+
+// Flow definitions
+model Flow {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  definition  Json     // Stores nodes and edges
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  executions FlowExecution[]
+
+  @@map("flows")
+}
+
+// Flow execution tracking
+model FlowExecution {
+  id        String   @id @default(uuid())
+  flowId    String
+  userId    String
+  status    String   // 'RUNNING', 'COMPLETED', 'FAILED'
+  context   Json?    // Runtime context
+  result    Json?    // Execution result
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  flow Flow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([flowId])
+  @@index([userId])
+  @@index([status])
+  @@map("flow_executions")
+}
